@@ -117,7 +117,6 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px;bord
 .rowmain{flex:1 1 auto;min-width:0}
 .rowmain b{display:block;font-weight:500;font-size:15px;line-height:1.35}
 .rowmain small{color:var(--muted);font-size:12.5px}
-.badge{flex:0 0 auto;font-size:19px;width:24px;text-align:center}
 
 .note{margin:30px 0 0;padding:14px 16px;border-left:2px solid var(--line);
   color:var(--muted);font-size:13px;line-height:1.6}
@@ -239,7 +238,7 @@ const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
 let currentUser = null;
 let suppressAuthRender = false;
-let userBadges = {};
+let userProgress = {}; // { [chapterCode]: { badge: 'oro'|'argento'|'bronzo'|null, bestScore: number } }
 
 const EXAM_SIZES = [15,30,50];
 const BADGE_RANK  = { bronzo:1, argento:2, oro:3 };
@@ -355,27 +354,31 @@ function authScreen(){
 function doLogout(){ signOut(auth); }
 
 /* ================= BADGES (Firestore: userProgress/{uid}) ================= */
-async function loadUserBadges(uid){
+async function loadUserProgress(uid){
   try{
     const snap = await getDoc(doc(db, 'userProgress', uid));
-    userBadges = snap.exists() ? (snap.data().badges || {}) : {};
+    userProgress = snap.exists() ? (snap.data().progress || {}) : {};
   }catch(e){
-    console.error('Errore nel caricamento dei badge:', e);
-    userBadges = {};
+    console.error('Errore nel caricamento dei progressi:', e);
+    userProgress = {};
   }
 }
-/* Upgrades the stored badge only if the new one outranks it. Returns {badge, upgraded}. */
+/* Saves a new personal-best percentage (and its badge) for a chapter, but ONLY if it beats
+   the stored bestScore (or there is no record yet). Ties and lower scores never write.
+   Returns {updated, bestScore, badge}. */
 async function registerChapterAttempt(code, pct){
-  const earned = badgeFor(pct);
-  const prev = userBadges[code] || null;
-  if(!earned || (prev && BADGE_RANK[prev] >= BADGE_RANK[earned])){
-    return { badge: prev, upgraded:false };
+  const prev = userProgress[code];
+  const prevBest = prev ? prev.bestScore : -1;
+  if(pct <= prevBest){
+    return { updated:false, bestScore: prevBest, badge: prev ? prev.badge : null };
   }
-  userBadges[code] = earned;
+  const badge = badgeFor(pct);
+  const entry = { badge: badge || null, bestScore: pct };
+  userProgress[code] = entry;
   try{
-    await setDoc(doc(db, 'userProgress', currentUser.uid), { [`badges.${code}`]: earned }, { merge:true });
-  }catch(e){ console.error('Errore nel salvataggio del badge:', e); }
-  return { badge: earned, upgraded:true };
+    await setDoc(doc(db, 'userProgress', currentUser.uid), { [`progress.${code}`]: entry }, { merge:true });
+  }catch(e){ console.error('Errore nel salvataggio del progresso:', e); }
+  return { updated:true, bestScore: pct, badge };
 }
 
 /* ================= LEADERBOARD (solo simulazioni) ================= */
@@ -423,11 +426,12 @@ function home(){
   const grp = (pred,label) => {
     const rows = DATA.map((c,i)=>[c,i]).filter(([c])=>pred(c.code));
     return `<div class="grouphead">${label}</div><div class="list">` + rows.map(([c,i])=>{
-      const badge = userBadges[c.code];
+      const p = userProgress[c.code];
+      const tag = p ? ` ${p.badge ? BADGE_EMOJI[p.badge] : ''} (${p.bestScore}%)` : '';
       return `<button class="row" data-ch="${i}">
         <span class="code">${c.code}</span>
-        <span class="rowmain"><b>${esc(c.title)}</b><small>${c.q.length} domande</small></span>
-        <span class="badge">${badge ? BADGE_EMOJI[badge] : ''}</span></button>`;
+        <span class="rowmain"><b>${esc(c.title)}${tag}</b><small>${c.q.length} domande</small></span>
+        </button>`;
     }).join('') + `</div>`;
   };
   const bestExam = s['exam'+examSize]!=null ? `Record: ${s['exam'+examSize]}%` : 'Domande casuali da tutti i capitoli';
@@ -615,15 +619,19 @@ function results(){
       <button class="btn" id="back">Torna alla Home</button>
     </div>
     ${reviewHtml()}`;
-    registerChapterAttempt(S.meta.code, pct).then(({badge, upgraded}) => {
+    registerChapterAttempt(S.meta.code, pct).then(({updated, bestScore, badge}) => {
       const el = app.querySelector('#badgebox');
       if(!el) return;
-      if(upgraded){
-        el.innerHTML = `<div class="badgewin">Hai vinto il Badge ${BADGE_LABEL[badge]}! ${BADGE_EMOJI[badge]}</div>
-          ${badge!=='oro' ? `<p class="badgehint">Riprova questo capitolo per puntare al Badge Oro 🥇.</p>` : ''}`;
+      if(updated){
+        el.innerHTML = badge
+          ? `<div class="badgewin">Nuovo record: ${bestScore}%! Badge ${BADGE_LABEL[badge]} ${BADGE_EMOJI[badge]}</div>
+             ${badge!=='oro' ? `<p class="badgehint">Riprova questo capitolo per puntare al Badge Oro 🥇.</p>` : ''}`
+          : `<div class="badgewin muted">Nuovo record: ${bestScore}%. Serve almeno il 40% per il Bronzo 🥉.</div>`;
       } else if(badge){
-        el.innerHTML = `<div class="badgewin muted">Il tuo badge per questo capitolo resta: ${BADGE_LABEL[badge]} ${BADGE_EMOJI[badge]}</div>
+        el.innerHTML = `<div class="badgewin muted">Il tuo record per questo capitolo resta ${bestScore}% — Badge ${BADGE_LABEL[badge]} ${BADGE_EMOJI[badge]}</div>
           ${badge!=='oro' ? `<p class="badgehint">Riprova per puntare a un badge più alto.</p>` : ''}`;
+      } else if(bestScore >= 0){
+        el.innerHTML = `<div class="badgewin muted">Il tuo record per questo capitolo resta ${bestScore}%: serve almeno il 40% per il Bronzo 🥉.</div>`;
       } else {
         el.innerHTML = `<div class="badgewin muted">Nessun badge questa volta: serve almeno il 40% per il Bronzo 🥉.</div>`;
       }
@@ -656,10 +664,10 @@ function results(){
 /* ================= BOOT ================= */
 async function afterAuthReady(){
   if(currentUser){
-    await loadUserBadges(currentUser.uid);
+    await loadUserProgress(currentUser.uid);
     home();
   } else {
-    userBadges = {};
+    userProgress = {};
     authScreen();
   }
 }
