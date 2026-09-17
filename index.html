@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
 <style>
 :root{
   --bg:#EEF0F3; --surface:#FFFFFF; --surface-2:#F7F8FA;
@@ -438,16 +439,39 @@ function renderChaptersUI(progressData){
   Object.keys(progressMap).forEach(k => { normalizedIndex[String(k).trim().toLowerCase()] = progressMap[k]; });
   const lookupProgress = code => progressMap[code] ?? normalizedIndex[String(code).trim().toLowerCase()];
 
+  // Tailwind row: 4 aligned columns — chapter (flexes, truncates), badge, record %, action.
+  // Colors reference the app's existing CSS custom properties (bg-[var(--surface)] etc.) via
+  // Tailwind's arbitrary-value syntax, so rows stay correct in both light and dark theme.
+  const renderRow = (c,i) => {
+    const p = lookupProgress(c.code);
+    const badgeCell = (p && p.badge)
+      ? `<span class="text-lg leading-none" aria-hidden="true">${BADGE_EMOJI[p.badge]}</span>`
+      : `<span class="inline-block h-2 w-2 rounded-full bg-[var(--line)]" title="Nessun badge"></span>`;
+    const pctText = p ? `${p.bestScore}%` : '0%';
+    return `
+    <button type="button" data-ch="${i}"
+      class="group flex w-full items-center gap-2 sm:gap-4 rounded-xl border border-[var(--line)]
+             bg-[var(--surface)] px-3 sm:px-4 py-3 text-left shadow-sm
+             transition-colors hover:bg-[var(--surface-2)] hover:border-[var(--accent)]">
+      <span class="min-w-0 flex-1">
+        <span class="block truncate text-[15px] font-medium text-[var(--ink)]">${esc(c.title)}</span>
+        <span class="block truncate text-xs text-[var(--muted)]">${c.code} · ${c.q.length} domande</span>
+      </span>
+      <span class="flex w-6 flex-none items-center justify-center">${badgeCell}</span>
+      <span class="w-10 flex-none text-right font-mono text-xs sm:text-sm text-[var(--muted)]">${pctText}</span>
+      <span class="flex-none inline-flex items-center gap-1 rounded-full bg-[var(--accent-soft)]
+                   px-2.5 sm:px-3 py-1 text-xs font-medium text-[var(--accent)]
+                   transition-transform group-hover:translate-x-0.5">
+        <span class="hidden sm:inline">Gioca</span>
+        <span aria-hidden="true">→</span>
+      </span>
+    </button>`;
+  };
+
   const grp = (pred,label) => {
     const rows = DATA.map((c,i)=>[c,i]).filter(([c])=>pred(c.code));
-    return `<div class="grouphead">${label}</div><div class="list">` + rows.map(([c,i])=>{
-      const p = lookupProgress(c.code);
-      const tag = p ? ` ${p.badge ? BADGE_EMOJI[p.badge] : ''} (${p.bestScore}%)` : '';
-      return `<button class="row" data-ch="${i}">
-        <span class="code">${c.code}</span>
-        <span class="rowmain"><b>${esc(c.title)}${tag}</b><small>${c.q.length} domande</small></span>
-        </button>`;
-    }).join('') + `</div>`;
+    return `<div class="grouphead">${label}</div>
+    <div class="flex flex-col gap-2">${rows.map(([c,i])=>renderRow(c,i)).join('')}</div>`;
   };
   return grp(c=>c[0]==='F', 'Funzioni aziendali') + grp(c=>c[0]==='C', 'Costi e controllo di gestione');
 }
