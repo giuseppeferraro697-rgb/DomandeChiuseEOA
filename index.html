@@ -378,7 +378,7 @@ async function registerChapterAttempt(code, pct){
   const entry = { badge: badge || null, bestScore: pct };
   userProgress[code] = entry;
   try{
-    await setDoc(doc(db, 'userProgress', currentUser.uid), { [`progress.${code}`]: entry }, { merge:true });
+    await setDoc(doc(db, 'userProgress', currentUser.uid), { progress: { [code]: entry } }, { merge:true });
   }catch(e){ console.error('Errore nel salvataggio del progresso:', e); }
   return { updated:true, bestScore: pct, badge };
 }
