@@ -424,10 +424,24 @@ function leaderboardScreen(initialSize){
    userProgress directly, so it's obvious this can only run once that data has arrived —
    see afterAuthReady(), which is the only place allowed to call home(). */
 function renderChaptersUI(progressData){
+  // Defensive unwrap: accept either the raw Firestore doc shape ({ progress: {...} }) or an
+  // already-unwrapped map ({ [code]: {...} }), and never throw on undefined/null input.
+  const progressMap = (progressData && typeof progressData === 'object' && progressData.progress
+    && typeof progressData.progress === 'object') ? progressData.progress
+    : (progressData && typeof progressData === 'object' ? progressData : {});
+
+  // Defensive key lookup: chapter codes (c.code, e.g. "F1A") are the keys we write to Firestore
+  // in registerChapterAttempt via `progress.${code}`, so that's what must match here too — NOT
+  // the chapter title. Build a normalized (trimmed, lowercased) index once, so a stray space or
+  // case difference in a stored key still resolves instead of silently showing no badge.
+  const normalizedIndex = {};
+  Object.keys(progressMap).forEach(k => { normalizedIndex[String(k).trim().toLowerCase()] = progressMap[k]; });
+  const lookupProgress = code => progressMap[code] ?? normalizedIndex[String(code).trim().toLowerCase()];
+
   const grp = (pred,label) => {
     const rows = DATA.map((c,i)=>[c,i]).filter(([c])=>pred(c.code));
     return `<div class="grouphead">${label}</div><div class="list">` + rows.map(([c,i])=>{
-      const p = progressData[c.code];
+      const p = lookupProgress(c.code);
       const tag = p ? ` ${p.badge ? BADGE_EMOJI[p.badge] : ''} (${p.bestScore}%)` : '';
       return `<button class="row" data-ch="${i}">
         <span class="code">${c.code}</span>
@@ -441,6 +455,7 @@ function renderChaptersUI(progressData){
 function home(){
   nextbar.classList.remove('on');
   window.scrollTo(0,0);
+  console.log('Dati progressi scaricati:', userProgress);
   const s = load();
   const wrong = loadWrong();
   const bestExam = s['exam'+examSize]!=null ? `Record: ${s['exam'+examSize]}%` : 'Domande casuali da tutti i capitoli';
