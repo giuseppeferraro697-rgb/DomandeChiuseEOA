@@ -2766,22 +2766,22 @@ export const DATA = [
       {
         s: "Quale delle seguenti affermazioni è falsa?",
         o: [
-          "I costi di logistica distributiva fanno parte dei costi industriali.", // 0
+          "I costi di logistica distributiva fanno parte dei costi industriali.", // 0 ← corretta
           "I costi di trasformazione fanno parte dei costi industriali.", // 1
-          "I costi dei materiali indiretti consumati dalle operations fino ai cancelli della fabbrica fanno parte dei costi di trasformazione.", // 2  ← corretta
+          "I costi dei materiali indiretti consumati dalle operations fino ai cancelli della fabbrica fanno parte dei costi di trasformazione.", // 2  
         ],
-        a: 2,
+        a: 0,
         d: 1,
       },
       // C1 #9
       {
         s: "Quale delle seguenti affermazioni è vera?",
         o: [
-          "Il costo della manodopera diretta è sempre un costo diretto.", // 0  ← corretta
+          "Il costo della manodopera diretta è sempre un costo diretto.", // 0  
           "Il costo della manodopera indiretta è sempre un costo indiretto, qualsiasi sia l’oggetto di costo considerato.", // 1
-          "La manodopera indiretta non è coinvolta nello svolgimento delle attività di trasformazione.", // 2
+          "La manodopera indiretta non è coinvolta nello svolgimento delle attività di trasformazione.", // 2 ← corretta
         ],
-        a: 0,
+        a: 2,
         d: 1,
       },
       // C1 #10
@@ -2865,6 +2865,7 @@ export const DATA = [
           "un costo indiretto", // 0
           "un costo diretto rispetto allo stabilimento", // 1
           "un costo diretto", // 2  ← corretta
+          "un costo non industriale", // 3
         ],
         a: 2,
       },
@@ -2946,11 +2947,11 @@ export const DATA = [
       {
         s: "Quale delle seguenti affermazioni è vera?",
         o: [
-          "I costi di trasformazione non includono mai costi di materie prime.", // 0  ← corretta
+          "I costi di trasformazione non includono mai costi di materie prime.", // 0  
           "I costi di trasformazione non includono i costi del magazzino prodotti finiti in fabbrica.", // 1
-          "I costi di trasformazione includono i costi dei materiali indiretti consumati dalle operations fino ai cancelli della fabbrica.", // 2
+          "I costi di trasformazione includono i costi dei materiali indiretti consumati dalle operations fino ai cancelli della fabbrica.", // 2 ← corretta
         ],
-        a: 0,
+        a: 2,
         d: 1,
       },
     ],
