@@ -222,11 +222,11 @@ export const DATA = [
       {
         s: "Quale dei seguenti non è un indicatore diretto o inverso di efficienza?",
         o: [
-          "La quantità di materia prima impiegata per realizzare un’unità di prodotto.", // 0  ← corretta
+          "La quantità di materia prima impiegata per realizzare un’unità di prodotto.", // 0  
           "Il rapporto fra il reddito netto generato da un’azienda e il capitale investito in azienda dai proprietari.", // 1
-          "Il rapporto fra i costi effettivamente sostenuti e i costi che si prevedeva di sostenere.", // 2
+          "Il rapporto fra i costi effettivamente sostenuti e i costi che si prevedeva di sostenere.", // 2 ← corretta
         ],
-        a: 0,
+        a: 2,
       },
     ],
   },
